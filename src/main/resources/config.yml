@@ -1,0 +1,96 @@
+# These names will cause the villager to be disabled when named with a nametag
+NamesThatDisable:
+  - Optimize
+  - Bonk
+
+# This needs to be a valid block ID to work.
+BlocksThatDisable:
+  - EMERALD_BLOCK
+  - DIAMOND_BLOCK
+
+# List of workstations that will disable mobs
+WorkstationsThatDisable:
+  - COMPOSTER
+  - SMOKER
+  - BARREL
+  - LOOM
+  - BLAST_FURNACE
+  - BREWING_STAND
+  - Cauldron
+  - FLETCHING_TABLE
+  - CARTOGRAPHY_TABLE
+  - LECTERN
+  - SMITHING_TABLE
+  - STONECUTTER
+  - GRINDSTONE
+
+# Please do the time in ticks or it will break the plugin. There is 24,000 ticks in a single day.
+# See https://minecraft.fandom.com/wiki/Daylight_cycle for more info
+RestockTimes:
+  times:
+    - 1000
+    - 13000
+
+# This time is in seconds. This cooldown is to prevent possible abuse
+# of people repeatedly disabling ai and re-enabling it to get double trades. I would keep this
+# at the minimum time of 10 minutes or 600 seconds due anything less allowing for the double trades to happen.
+ai-toggle-cooldown: 600
+
+# The maximum radius in blocks the /avloptimize command can search
+RadiusLimit: 50
+
+# the default radius for /avloptimize when no argument is specified
+RadiusDefault: 50
+
+toggleableoptions:
+  # Prevent trading with villagers when they aren't disabled. Still allows players to preview trades
+  preventtrading: true
+
+  # If set to true, nametags will be used instead of being infinite.
+  usenametags: false
+
+  # One of these following options needs to be true for the plugin to work.
+  ### This will allow nametags to disable and renable the Villager AI. This also effects the /avloptimize command
+  userenaming: true
+
+  ### This will allow a block to disable and renable the Villager AI.
+  useblocks: false
+
+  ### This feature will disable the villager if they have a workstation in the configurable radius in blocks of the villager
+  useworkstations: false
+  workstationcheckradius: 2
+
+messages:
+  no-permission: "&cYou don't have permission to use this command."
+  reload-message: "&aPlugin successfully reloaded."
+  cooldown-ai-message: "&cYou can toggle this villager's AI again in %avlminutes% minutes and %avlseconds% seconds."
+  cooldown-levelup-message: "&cThe villager is currently leveling up! You can use the villager again in %avlseconds% seconds."
+  next-restock: "&cThe next restock for the villager will be in %avlrestockmin% minutes and %avlrestocksec% seconds."
+  optimize-command-usage: "&cCorrect Usage is /avloptimize <radius>"
+  unoptimize-command-usage: "&cCorrect Usage is /avlunoptimize <radius>"
+  radius-limit: "&cThe radius you tried is too big. Radius limit is %avlradiuslimit% blocks."
+  VillagerMustBeDisabled: "&cYou need to disable the villager before you can trade with it"
+  searching-radius: "&aSearching radius of %avlradius% blocks."
+  radius-invalid: "&cRadius must be a valid Integer."
+
+  # Enhanced feedback messages for better player experience
+  villager-optimized: "&a✓ Villager AI disabled! This villager is now optimized and consuming minimal server resources."
+  villager-unoptimized: "&e⚠ Villager AI enabled! This villager is now active and can move/breed."
+  villager-already-optimized: "&7This villager is already optimized (AI disabled)."
+  villager-already-unoptimized: "&7This villager is already active (AI enabled)."
+  villager-status-optimized: "&a[OPTIMIZED] &7This villager's AI is disabled - ready for trading!"
+  villager-status-active: "&e[ACTIVE] &7This villager's AI is enabled - can move and breed."
+  villager-performance-tip: "&6💡 Tip: Keep villagers optimized when not breeding to improve server performance!"
+  villager-breeding-reminder: "&6💡 Reminder: Unoptimize villagers temporarily if you need them to breed."
+  villager-zombie-protected: "&a🛡 This optimized villager is protected from zombie attacks!"
+  villager-restock-success: "&a✅ Villager restocked successfully!"
+  villager-levelup-starting: "&e⚡ Villager is leveling up... AI temporarily enabled."
+  villager-levelup-complete: "&a✅ Villager level up complete! AI optimization restored."
+  bulk-optimize-start: "&aStarting bulk optimization of villagers..."
+  bulk-optimize-complete: "&a✅ Bulk optimization complete! &7%avlcount% villagers optimized."
+  bulk-unoptimize-start: "&eStarting bulk unoptimization of villagers..."
+  bulk-unoptimize-complete: "&e✅ Bulk unoptimization complete! &7%avlcount% villagers activated."
+  performance-impact: "&a📊 Performance Impact: &7-%avlpercentage%% server load from optimized villagers."
+  action-help: "&6ℹ Right-click with 'Optimize' nametag to disable AI, or rename to anything else to enable AI."
+  villager-info-optimized: "&a[OPTIMIZED] &7Status: Frozen, Trading: Available, Breeding: Disabled"
+  villager-info-active: "&e[ACTIVE] &7Status: Mobile, Trading: Restricted, Breeding: Enabled"
