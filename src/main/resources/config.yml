@@ -60,6 +60,19 @@ toggleableoptions:
   useworkstations: false
   workstationcheckradius: 2
 
+# New ergonomic features for better user experience
+visual-feedback:
+  enabled: true
+  particles: true
+  sounds: true
+
+action-bar:
+  enabled: true
+  status-optimized: "&a[OPTIMIZED] &7Ready for trading"
+  status-active: "&e[ACTIVE] &7Mobile villager"
+  status-new: "&7[NEW] &eRight-click to setup"
+  cooldown: "&c⏰ Cooldown: %avlminutes%m %avlseconds%s"
+
 messages:
   no-permission: "&cYou don't have permission to use this command."
   reload-message: "&aPlugin successfully reloaded."

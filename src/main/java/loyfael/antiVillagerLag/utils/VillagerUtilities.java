@@ -9,102 +9,107 @@ import org.bukkit.persistence.PersistentDataType;
 import loyfael.antiVillagerLag.AntiVillagerLag;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VillagerUtilities {
-
-    ///     Keys
 
     private static final String MARKER_KEY = "Marker";
     private static final String AI_COOLDOWN_KEY = "cooldown";
     private static final String LEVEL_COOLDOWN_KEY = "levelCooldown";
     private static final String LAST_RESTOCK_KEY = "time";
+
+    private static volatile NamespacedKey markerKey;
+    private static volatile NamespacedKey aiCooldownKey;
+    private static volatile NamespacedKey levelCooldownKey;
+    private static volatile NamespacedKey lastRestockKey;
+
     public static final ColorCode colorcodes = new ColorCode();
 
-    ///     Config Variables
+    public static final Set<String> disabling_names = ConcurrentHashMap.newKeySet();
+    public static final EnumSet<Material> standingon_blocks = EnumSet.noneOf(Material.class);
+    public static final EnumSet<Material> workstation_blocks = EnumSet.noneOf(Material.class);
+    public static final List<Long> restock_times = new ArrayList<>();
 
-    public static List<String> disabling_names = new ArrayList<>();
-    public static List<Material> standingon_blocks = new ArrayList<>();
-    public static List<Material> workstation_blocks = new ArrayList<>();
-    public static List<Long> restock_times = new ArrayList<>();
+    public static synchronized void initializeKeys(AntiVillagerLag plugin) {
+        if (markerKey == null) {
+            markerKey = new NamespacedKey(plugin, MARKER_KEY);
+            aiCooldownKey = new NamespacedKey(plugin, AI_COOLDOWN_KEY);
+            levelCooldownKey = new NamespacedKey(plugin, LEVEL_COOLDOWN_KEY);
+            lastRestockKey = new NamespacedKey(plugin, LAST_RESTOCK_KEY);
+        }
+    }
 
-    ///     Marker
+    public static void initializeNewVillager(Villager villager, AntiVillagerLag plugin, long currentTime) {
+        PersistentDataContainer container = villager.getPersistentDataContainer();
+
+        container.set(markerKey, PersistentDataType.BOOLEAN, true);
+        container.set(aiCooldownKey, PersistentDataType.LONG, 0L);
+        container.set(levelCooldownKey, PersistentDataType.LONG, 0L);
+        container.set(lastRestockKey, PersistentDataType.LONG, villager.getWorld().getFullTime());
+    }
+
+    public static boolean hasMarker(Villager v, AntiVillagerLag plugin) {
+        return v.getPersistentDataContainer().has(markerKey, PersistentDataType.BOOLEAN);
+    }
+
+    public static boolean getMarker(Villager v, AntiVillagerLag plugin) {
+        Boolean result = v.getPersistentDataContainer().get(markerKey, PersistentDataType.BOOLEAN);
+        return result != null ? result : false;
+    }
 
     public static void setMarker(Villager v, AntiVillagerLag plugin, boolean val) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, MARKER_KEY);
-        container.set(key, PersistentDataType.BOOLEAN, val);
-    }
-    public static boolean hasMarker(Villager v, AntiVillagerLag plugin) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, MARKER_KEY);
-        return container.has(key, PersistentDataType.BOOLEAN);
-    }
-    // If false, then villager is disabled
-    public static boolean getMarker(Villager v, AntiVillagerLag plugin) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, MARKER_KEY);
-        return container.get(key, PersistentDataType.BOOLEAN);
-    }
-    public static void removeMarker(Villager v, AntiVillagerLag plugin) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, MARKER_KEY);
-        container.remove(key);
-    }
-
-    ///     Data
-
-    public static void createData(Villager v, AntiVillagerLag plugin, String key_name, long data) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, key_name);
-        container.set(key, PersistentDataType.LONG, data);
-    }
-    public static long getData(Villager v, AntiVillagerLag plugin, String key_name) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, key_name);
-        return container.get(key, PersistentDataType.LONG);
-    }
-    public static void removeData(Villager v, AntiVillagerLag plugin, String key_name) {
-        PersistentDataContainer container = v.getPersistentDataContainer();
-        NamespacedKey key = new NamespacedKey(plugin, key_name);
-        container.remove(key);
-    }
-
-    public static void setAiCooldown(Villager v, AntiVillagerLag plugin, long cooldown) {
-        createData(v, plugin, AI_COOLDOWN_KEY, (System.currentTimeMillis() / 1000) + cooldown);
-    }
-    public static void setLevelCooldown(Villager v, AntiVillagerLag plugin, long cooldown) {
-        createData(v, plugin, LEVEL_COOLDOWN_KEY, (System.currentTimeMillis() / 1000) + cooldown);
-    }
-    public static void setLastRestock(Villager v, AntiVillagerLag plugin) {
-        createData(v, plugin, LAST_RESTOCK_KEY, v.getWorld().getFullTime());
+        v.getPersistentDataContainer().set(markerKey, PersistentDataType.BOOLEAN, val);
     }
 
     public static long getAiCooldown(Villager v, AntiVillagerLag plugin) {
-        return getData(v, plugin,  AI_COOLDOWN_KEY);
-    }
-    public static long getLevelCooldown(Villager v, AntiVillagerLag plugin) {
-        return getData(v, plugin, LEVEL_COOLDOWN_KEY);
-    }
-    public static long getLastRestock(Villager v, AntiVillagerLag plugin) {
-        return getData(v, plugin, LAST_RESTOCK_KEY);
+        Long result = v.getPersistentDataContainer().get(aiCooldownKey, PersistentDataType.LONG);
+        return result != null ? result : 0L;
     }
 
-    ///     Config fetching
+    public static long getLevelCooldown(Villager v, AntiVillagerLag plugin) {
+        Long result = v.getPersistentDataContainer().get(levelCooldownKey, PersistentDataType.LONG);
+        return result != null ? result : 0L;
+    }
+
+    public static long getLastRestock(Villager v, AntiVillagerLag plugin) {
+        Long result = v.getPersistentDataContainer().get(lastRestockKey, PersistentDataType.LONG);
+        return result != null ? result : 0L;
+    }
+
+    public static void setAiCooldown(Villager v, AntiVillagerLag plugin, long cooldown) {
+        v.getPersistentDataContainer().set(aiCooldownKey, PersistentDataType.LONG,
+            (System.currentTimeMillis() / 1000) + cooldown);
+    }
+
+    public static void setLevelCooldown(Villager v, AntiVillagerLag plugin, long cooldown) {
+        v.getPersistentDataContainer().set(levelCooldownKey, PersistentDataType.LONG,
+            (System.currentTimeMillis() / 1000) + cooldown);
+    }
+
+    public static void setLastRestock(Villager v, AntiVillagerLag plugin) {
+        v.getPersistentDataContainer().set(lastRestockKey, PersistentDataType.LONG,
+            v.getWorld().getFullTime());
+    }
 
     public static void updateNameTags(AntiVillagerLag plugin) {
         if (!plugin.getConfig().getBoolean("toggleableoptions.userenaming")) return;
+
         disabling_names.clear();
-        for (String name : plugin.getConfig().getStringList("NamesThatDisable")) {
+        List<String> names = plugin.getConfig().getStringList("NamesThatDisable");
+        for (String name : names) {
             disabling_names.add(name.toLowerCase());
         }
-
     }
 
     public static void updateStandingOnBlocks(AntiVillagerLag plugin) {
         if (!plugin.getConfig().getBoolean("toggleableoptions.useblocks")) return;
+
         standingon_blocks.clear();
-        for (String blockName : plugin.getConfig().getStringList("BlocksThatDisable")) {
+        List<String> blockNames = plugin.getConfig().getStringList("BlocksThatDisable");
+        for (String blockName : blockNames) {
             Material block = Material.getMaterial(blockName.toUpperCase());
             if (block != null) {
                 standingon_blocks.add(block);
@@ -114,8 +119,10 @@ public class VillagerUtilities {
 
     public static void updateWorkstationBlocks(AntiVillagerLag plugin) {
         if (!plugin.getConfig().getBoolean("toggleableoptions.useworkstations")) return;
+
         workstation_blocks.clear();
-        for (String blockName : plugin.getConfig().getStringList("WorkstationsThatDisable")) {
+        List<String> blockNames = plugin.getConfig().getStringList("WorkstationsThatDisable");
+        for (String blockName : blockNames) {
             Material block = Material.getMaterial(blockName.toUpperCase());
             if (block != null) {
                 workstation_blocks.add(block);
@@ -125,28 +132,27 @@ public class VillagerUtilities {
 
     public static void updateRestockTimes(AntiVillagerLag plugin) {
         restock_times.clear();
-        for (long restockTime : plugin.getConfig().getLongList("RestockTimes.times")) {
-            restock_times.add(restockTime);
-        }
+        restock_times.addAll(plugin.getConfig().getLongList("RestockTimes.times"));
     }
-
-    ///     Clean Up
 
     public static void CleanseTheVillagers(Villager v, AntiVillagerLag plugin) {
         if (!hasMarker(v, plugin)) return;
+
         v.setAware(true);
-        removeMarker(v, plugin);
-        removeData(v, plugin, AI_COOLDOWN_KEY);
-        removeData(v, plugin, LEVEL_COOLDOWN_KEY);
-        removeData(v, plugin, LAST_RESTOCK_KEY);
+        PersistentDataContainer container = v.getPersistentDataContainer();
+
+        container.remove(markerKey);
+        container.remove(aiCooldownKey);
+        container.remove(levelCooldownKey);
+        container.remove(lastRestockKey);
+
+        VillagerCache.removeVillager(v.getUniqueId());
     }
 
-    // Villager Restocking
     public static void restock(Villager v) {
         List<MerchantRecipe> recipes = v.getRecipes();
-        for (MerchantRecipe r: recipes) {
-            r.setUses(0);
+        for (int i = 0; i < recipes.size(); i++) {
+            recipes.get(i).setUses(0);
         }
     }
-
 }

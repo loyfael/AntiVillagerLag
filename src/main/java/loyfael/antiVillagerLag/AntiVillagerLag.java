@@ -12,9 +12,12 @@ import loyfael.antiVillagerLag.commands.ReloadCommand;
 import loyfael.antiVillagerLag.commands.RemoveChangesCommand;
 import loyfael.antiVillagerLag.commands.UnoptimizeCommand;
 import loyfael.antiVillagerLag.commands.StatusCommand;
+import loyfael.antiVillagerLag.commands.InfoCommand;
 import loyfael.antiVillagerLag.events.EventListener;
 import loyfael.antiVillagerLag.utils.UpdateChecker;
 import loyfael.antiVillagerLag.utils.VillagerUtilities;
+import loyfael.antiVillagerLag.utils.TaskManager;
+import loyfael.antiVillagerLag.utils.VillagerCache;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,25 +29,33 @@ public final class AntiVillagerLag extends JavaPlugin {
     @Override
     public void onEnable() {
 
+        // Initialisation des optimisations de performance
+        VillagerUtilities.initializeKeys(this);
+        TaskManager.initialize(this);
+
         //  Command Registration
         getCommand("avlreload").setExecutor(new ReloadCommand(this));
         getCommand("avloptimize").setExecutor(new OptimizeCommand(this));
         getCommand("avlunoptimize").setExecutor(new UnoptimizeCommand(this));
         getCommand("avlremove").setExecutor(new RemoveChangesCommand(this));
         getCommand("avlstatus").setExecutor(new StatusCommand(this));
+        getCommand("avlinfo").setExecutor(new InfoCommand(this));
 
         //  Event Registration
         getServer().getPluginManager().registerEvents(new EventListener(this), this);
-
 
         //  Config Stuff
         saveDefaultConfig();
         updateConfig();
 
-        VillagerUtilities.updateNameTags(this);
-        VillagerUtilities.updateStandingOnBlocks(this);
-        VillagerUtilities.updateWorkstationBlocks(this);
-        VillagerUtilities.updateRestockTimes(this);
+        TaskManager.runAsync(() -> {
+            VillagerUtilities.updateNameTags(this);
+            VillagerUtilities.updateStandingOnBlocks(this);
+            VillagerUtilities.updateWorkstationBlocks(this);
+            VillagerUtilities.updateRestockTimes(this);
+        }).thenRun(() -> {
+            getLogger().info("AntiVillagerLag optimizations loaded - ready for 2000+ villagers!");
+        });
 
         //  Bstats Code
         int pluginId = 15890;
@@ -69,7 +80,10 @@ public final class AntiVillagerLag extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        //  Plugin shutdown logic
+        TaskManager.shutdown();
+        VillagerCache.clearCache();
+
+        getLogger().info("AntiVillagerLag optimizations cleaned up");
     }
 
     //  Configuration File Updater

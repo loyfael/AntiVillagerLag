@@ -63,8 +63,11 @@ public class OptimizeCommand implements CommandExecutor {
 
                 // Only optimize if not already optimized
                 if (VillagerUtilities.getMarker(villager, plugin)) {
-                    //  Rename villager
-                    villager.setCustomName(VillagerUtilities.disabling_names.getFirst());
+                    //  Rename villager - correction pour Set au lieu de List
+                    if (!VillagerUtilities.disabling_names.isEmpty()) {
+                        String firstName = VillagerUtilities.disabling_names.iterator().next();
+                        villager.setCustomName(firstName);
+                    }
                     //  Update the marker and AI
                     VillagerUtilities.setMarker(villager, plugin, false);
                     villager.setAware(false);

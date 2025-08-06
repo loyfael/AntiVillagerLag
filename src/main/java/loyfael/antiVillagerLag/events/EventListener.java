@@ -2,9 +2,12 @@ package loyfael.antiVillagerLag.events;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.entity.*;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -14,8 +17,10 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import loyfael.antiVillagerLag.AntiVillagerLag;
+import loyfael.antiVillagerLag.utils.ActionBarUtils;
 import loyfael.antiVillagerLag.utils.UpdateChecker;
 import loyfael.antiVillagerLag.utils.VillagerUtilities;
+import loyfael.antiVillagerLag.utils.VillagerCache;
 
 public class EventListener implements Listener {
 
@@ -73,7 +78,8 @@ public class EventListener implements Listener {
         if (should_be_disabled == VillagerUtilities.getMarker(villager, plugin)) {
             //  If toggling is on cooldown
             if ((vilAiCooldown > currentTime) && !player.hasPermission("avl.cooldown.bypass")) {
-                //Tell player it's on cooldown
+                //Tell player it's on cooldown with action bar
+                ActionBarUtils.sendCooldownInfo(player, min, sec, plugin);
                 String message = plugin.getConfig().getString("messages.cooldown-ai-message");
                 message = message.replaceAll("%avlminutes%", Long.toString(min));
                 message = message.replaceAll("%avlseconds%", Long.toString(sec));
@@ -86,7 +92,11 @@ public class EventListener implements Listener {
                 villager.setAware(!should_be_disabled);
                 VillagerUtilities.setAiCooldown(villager, plugin, plugin.getConfig().getLong("ai-toggle-cooldown"));
 
-                // Enhanced feedback messages
+                // Show visual and audio feedback
+                showVillagerStateChange(villager, player, wasOptimized);
+
+                // Enhanced feedback messages with action bar
+                ActionBarUtils.sendVillagerStatus(player, villager, plugin);
                 if (!should_be_disabled) {
                     // Villager was optimized, now being unoptimized (activated)
                     player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.villager-unoptimized")));
@@ -107,17 +117,8 @@ public class EventListener implements Listener {
         }
         //  If the villager AI is not being toggled
         else {
-            // Show current status to player
-            if (VillagerUtilities.getMarker(villager, plugin)) {
-                // Villager is optimized
-                player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.villager-status-optimized")));
-                player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.villager-info-optimized")));
-            } else {
-                // Villager is active
-                player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.villager-status-active")));
-                player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.villager-info-active")));
-                player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.action-help")));
-            }
+            // Show current status with action bar
+            ActionBarUtils.sendVillagerStatus(player, villager, plugin);
 
             //  If nametag shouldn't be consumed, give one back
             if (!VillagerUtilities.hasMarker(villager, plugin)) return;
@@ -134,45 +135,97 @@ public class EventListener implements Listener {
         }
     }
 
-    // Code for forcing players to disable villagers
-
-    @EventHandler
-    public void inventoryMove(InventoryClickEvent event) {
-        if (event.isCancelled()) return;
-        if (!plugin.getConfig().getBoolean("toggleableoptions.preventtrading")) return;
-        if (!(event.getInventory().getHolder() instanceof Villager)) return;
-        Villager vil = (Villager) event.getInventory().getHolder();
-        if (!VillagerUtilities.hasMarker(vil, plugin)) return;
-        if (!VillagerUtilities.getMarker(vil, plugin)) return;
-        Player player = (Player) event.getWhoClicked();
-        event.setCancelled(true);
-        //player.closeInventory();
-        player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.VillagerMustBeDisabled")));
+    // Helper method for visual feedback - optimisé
+    private void showVillagerStateChange(Villager villager, Player player, boolean wasOptimized) {
+        if (plugin.getConfig().getBoolean("visual-feedback.enabled", true)) {
+            if (wasOptimized) {
+                // Villager activated - particules clouds
+                villager.getWorld().spawnParticle(Particle.CLOUD,
+                    villager.getLocation().add(0, 1, 0), 5, 0.2, 0.2, 0.2, 0.02);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_AMBIENT, 0.6f, 1.0f);
+            } else {
+                // Villager optimised - particules happy
+                villager.getWorld().spawnParticle(Particle.HAPPY_VILLAGER,
+                    villager.getLocation().add(0, 1.5, 0), 8, 0.3, 0.3, 0.3, 0.05);
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.1f);
+            }
+        }
     }
 
-    @EventHandler
-    public void villagerTradeClick(TradeSelectEvent event) {
-        if (event.isCancelled()) return;
-        if (!plugin.getConfig().getBoolean("toggleableoptions.preventtrading")) return;
+    // Méthodes utilitaires ultra-optimisées
+    private void showVillagerStatus(Player player, Villager villager, VillagerCache.VillagerData data) {
+        ActionBarUtils.sendVillagerStatus(player, villager, plugin);
+
+        if (data.aiState) {
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.villager-status-optimized")));
+        } else {
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.villager-status-active")));
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.action-help")));
+        }
+    }
+
+    private void sendOptimizedFeedbackMessage(Player player, boolean wasOptimized) {
+        if (wasOptimized) {
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.villager-optimized")));
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.villager-performance-tip")));
+        } else {
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.villager-unoptimized")));
+            player.sendMessage(VillagerUtilities.colorcodes.cm(
+                plugin.getConfig().getString("messages.villager-breeding-reminder")));
+        }
+    }
+
+    // Events optimisés avec priorité et filtrage rapide
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void inventoryMove(InventoryClickEvent event) {
+        // Vérifications rapides en premier
         if (!(event.getInventory().getHolder() instanceof Villager)) return;
+        if (!plugin.getConfig().getBoolean("toggleableoptions.preventtrading")) return;
+
         Villager vil = (Villager) event.getInventory().getHolder();
-        if (!VillagerUtilities.hasMarker(vil, plugin)) return;
-        if (!VillagerUtilities.getMarker(vil, plugin)) return;
+        VillagerCache.VillagerData data = VillagerCache.getVillagerData(vil, plugin);
+
+        if (data == null || !data.aiState) return;
+
+        Player player = (Player) event.getWhoClicked();
+        event.setCancelled(true);
+        player.sendMessage(VillagerUtilities.colorcodes.cm(
+            plugin.getConfig().getString("messages.VillagerMustBeDisabled")));
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void villagerTradeClick(TradeSelectEvent event) {
+        if (!(event.getInventory().getHolder() instanceof Villager)) return;
+        if (!plugin.getConfig().getBoolean("toggleableoptions.preventtrading")) return;
+
+        Villager vil = (Villager) event.getInventory().getHolder();
+        VillagerCache.VillagerData data = VillagerCache.getVillagerData(vil, plugin);
+
+        if (data == null || !data.aiState) return;
+
         Player player = (Player) event.getWhoClicked();
         event.setCancelled(true);
         player.closeInventory();
-        player.sendMessage(VillagerUtilities.colorcodes.cm(plugin.getConfig().getString("messages.VillagerMustBeDisabled")));
+        player.sendMessage(VillagerUtilities.colorcodes.cm(
+            plugin.getConfig().getString("messages.VillagerMustBeDisabled")));
     }
 
-    // Event to handle cancellation of damage to villagers disable by the plugin
-    @EventHandler
+    // Optimisation critique - utiliser le cache au lieu de PersistentData
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCancelVillagerDamage(EntityDamageByEntityEvent event) {
-        if (event.isCancelled()) return;
         if (!(event.getEntity() instanceof Villager && event.getDamager() instanceof Zombie)) return;
 
         Villager vil = (Villager) event.getEntity();
+        VillagerCache.VillagerData data = VillagerCache.getVillagerData(vil, plugin);
 
-        if (VillagerUtilities.hasMarker(vil, plugin) && !VillagerUtilities.getMarker(vil, plugin)) {
+        // Protéger seulement les villagers optimisés (AI disabled)
+        if (data != null && !data.aiState) {
             event.setCancelled(true);
         }
     }
