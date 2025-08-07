@@ -26,6 +26,10 @@ commands:
     description: "Shows detailed status report of villagers in the area"
     usage: "/avlstatus [radius]"
     permission: avl.status
+  avlinfo:
+    description: "Shows information about the AntiVillagerLag plugin"
+    usage: "/avlinfo"
+    permission: avl.info
 
 permissions:
   avl.cooldown.bypass:
@@ -36,3 +40,5 @@ permissions:
     default: false
   avl.notify.update:
     op: true
+  avl.info:
+    default: true

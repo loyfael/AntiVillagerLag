@@ -1,8 +1,6 @@
 package loyfael.antiVillagerLag;
 
 import org.bstats.bukkit.Metrics;
-import org.bstats.charts.MultiLineChart;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,19 +19,17 @@ import loyfael.antiVillagerLag.utils.VillagerCache;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public final class AntiVillagerLag extends JavaPlugin {
 
     @Override
     public void onEnable() {
 
-        // Initialisation des optimisations de performance
+        // Performance optimization initialization
         VillagerUtilities.initializeKeys(this);
         TaskManager.initialize(this);
 
-        //  Command Registration
+        // Command Registration
         getCommand("avlreload").setExecutor(new ReloadCommand(this));
         getCommand("avloptimize").setExecutor(new OptimizeCommand(this));
         getCommand("avlunoptimize").setExecutor(new UnoptimizeCommand(this));
@@ -41,10 +37,10 @@ public final class AntiVillagerLag extends JavaPlugin {
         getCommand("avlstatus").setExecutor(new StatusCommand(this));
         getCommand("avlinfo").setExecutor(new InfoCommand(this));
 
-        //  Event Registration
+        // Event Registration
         getServer().getPluginManager().registerEvents(new EventListener(this), this);
 
-        //  Config Stuff
+        // Config Stuff
         saveDefaultConfig();
         updateConfig();
 
@@ -55,20 +51,16 @@ public final class AntiVillagerLag extends JavaPlugin {
             VillagerUtilities.updateRestockTimes(this);
         }).thenRun(() -> {
             getLogger().info("AntiVillagerLag optimizations loaded - ready for 2000+ villagers!");
+
+            // START the optimized automatic restock system
+            startAutomaticRestockSystem();
         });
 
-        //  Bstats Code
+        // Bstats Code
         int pluginId = 15890;
         Metrics metrics = new Metrics(this, pluginId);
-        //  Optional: Add custom charts
-        metrics.addCustomChart(new MultiLineChart("players_and_servers", () -> {
-            Map<String, Integer> valueMap = new HashMap<>();
-            valueMap.put("servers", 1);
-            valueMap.put("players", Bukkit.getOnlinePlayers().size());
-            return valueMap;
-        }));
 
-        //  Check for plugin updates
+        // Check for plugin updates
         new UpdateChecker(this, 102949).getVersion(version -> {
             if (this.getDescription().getVersion().equals(version)) {
                 getLogger().info("AntiVillagerLag is up to date!");
@@ -86,7 +78,7 @@ public final class AntiVillagerLag extends JavaPlugin {
         getLogger().info("AntiVillagerLag optimizations cleaned up");
     }
 
-    //  Configuration File Updater
+    // Configuration File Updater
     public Configuration cfg = this.getConfig().getDefaults();
     public void updateConfig() {
         try {
@@ -106,5 +98,15 @@ public final class AntiVillagerLag extends JavaPlugin {
         } catch (IOException | InvalidConfigurationException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Ultra-optimized restock system: "Lazy Loading"
+     * Does nothing in background - only restocks when a player interacts
+     */
+    private void startAutomaticRestockSystem() {
+        // NO repetitive task!
+        // Restock happens automatically in EventListener when needed
+        getLogger().info("Lazy restock system enabled (on-demand restock)");
     }
 }

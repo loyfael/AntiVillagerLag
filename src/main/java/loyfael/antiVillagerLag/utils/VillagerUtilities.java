@@ -30,6 +30,8 @@ public class VillagerUtilities {
 
     public static final Set<String> disabling_names = ConcurrentHashMap.newKeySet();
     public static final EnumSet<Material> standingon_blocks = EnumSet.noneOf(Material.class);
+    public static final EnumSet<Material> disabling_blocks = EnumSet.noneOf(Material.class);
+    public static final EnumSet<Material> enabling_blocks = EnumSet.noneOf(Material.class);
     public static final EnumSet<Material> workstation_blocks = EnumSet.noneOf(Material.class);
     public static final List<Long> restock_times = new ArrayList<>();
 
@@ -107,14 +109,29 @@ public class VillagerUtilities {
     public static void updateStandingOnBlocks(AntiVillagerLag plugin) {
         if (!plugin.getConfig().getBoolean("toggleableoptions.useblocks")) return;
 
-        standingon_blocks.clear();
-        List<String> blockNames = plugin.getConfig().getStringList("BlocksThatDisable");
-        for (String blockName : blockNames) {
+        // Charger les blocs qui DÉSACTIVENT les villageois
+        disabling_blocks.clear();
+        List<String> disablingBlockNames = plugin.getConfig().getStringList("BlocksThatDisable");
+        for (String blockName : disablingBlockNames) {
             Material block = Material.getMaterial(blockName.toUpperCase());
             if (block != null) {
-                standingon_blocks.add(block);
+                disabling_blocks.add(block);
             }
         }
+
+        // Charger les blocs qui ACTIVENT les villageois
+        enabling_blocks.clear();
+        List<String> enablingBlockNames = plugin.getConfig().getStringList("BlocksThatEnable");
+        for (String blockName : enablingBlockNames) {
+            Material block = Material.getMaterial(blockName.toUpperCase());
+            if (block != null) {
+                enabling_blocks.add(block);
+            }
+        }
+
+        // Maintenir la compatibilité avec l'ancienne liste (sera supprimée dans une version future)
+        standingon_blocks.clear();
+        standingon_blocks.addAll(disabling_blocks);
     }
 
     public static void updateWorkstationBlocks(AntiVillagerLag plugin) {
