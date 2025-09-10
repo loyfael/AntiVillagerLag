@@ -11,6 +11,7 @@ import loyfael.antiVillagerLag.commands.RemoveChangesCommand;
 import loyfael.antiVillagerLag.commands.UnoptimizeCommand;
 import loyfael.antiVillagerLag.commands.StatusCommand;
 import loyfael.antiVillagerLag.commands.InfoCommand;
+import loyfael.antiVillagerLag.commands.MendingCommand;
 import loyfael.antiVillagerLag.events.EventListener;
 import loyfael.antiVillagerLag.utils.VillagerUtilities;
 import loyfael.antiVillagerLag.utils.TaskManager;
@@ -37,7 +38,11 @@ public final class AntiVillagerLag extends JavaPlugin {
         getCommand("avlinfo").setExecutor(new InfoCommand(this));
 
         // Event Registration
-        getServer().getPluginManager().registerEvents(new EventListener(this), this);
+        EventListener eventListener = new EventListener(this);
+        getServer().getPluginManager().registerEvents(eventListener, this);
+        
+        // Register Mending Command
+        getCommand("mending").setExecutor(new MendingCommand(this, eventListener));
 
         // Config Stuff
         saveDefaultConfig();

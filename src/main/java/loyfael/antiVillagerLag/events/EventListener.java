@@ -16,6 +16,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantRecipe;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
+import java.util.List;
+import java.util.ArrayList;
 import loyfael.antiVillagerLag.AntiVillagerLag;
 import loyfael.antiVillagerLag.utils.VillagerUtilities;
 import loyfael.antiVillagerLag.utils.VillagerCache;
@@ -97,9 +102,10 @@ public class EventListener implements Listener {
         // Only when a player interacts - ultra-optimized!
         if (!VillagerUtilities.getMarker(villager, plugin)) {
             checkAndRestockIfNeeded(villager);
-            // Vérifier et supprimer les trades avec Mending après le restock
-            removeMendingTrades(villager);
         }
+        
+        // TOUJOURS vérifier et supprimer les trades avec Mending (pour test)
+        removeMendingTradesComplete(villager);
     }
 
     /**
@@ -170,119 +176,172 @@ public class EventListener implements Listener {
         return nextRestock;
     }
 
-    /**
-     * Supprime tous les trades qui contiennent des objets avec l'enchantement Mending
+        /**
+     * Vérifie si un ItemStack contient l'enchantement Mending
+     * Gère correctement les livres enchantés avec EnchantmentStorageMeta
      */
-    private void removeMendingTrades(Villager villager) {
+    private boolean hasMendingEnchantment(ItemStack item) {
+        if (item == null) return false;
+        
+        // Vérifier les enchantements normaux (sur les outils, armes, armures)
+        if (item.getEnchantments().containsKey(Enchantment.MENDING)) {
+            return true;
+        }
+        
+        // Vérifier les enchantements stockés (sur les livres enchantés)
+        if (item.hasItemMeta() && item.getItemMeta() instanceof EnchantmentStorageMeta) {
+            EnchantmentStorageMeta meta = (EnchantmentStorageMeta) item.getItemMeta();
+            return meta.hasStoredEnchant(Enchantment.MENDING);
+        }
+        
+        return false;
+    }
+
+    /**
+     * Supprime TOUS les trades contenant du Mending de manière ultra-efficace
+     * Inspiré directement du plugin TradeManager
+     */
+    private void removeMendingTradesComplete(Villager villager) {
         try {
             // Vérifier si la prévention du Mending est activée
             if (!plugin.getConfig().getBoolean("toggleableoptions.prevent-mending-trades", true)) {
+                plugin.getLogger().info("DEBUG: Prévention du Mending désactivée dans la config");
                 return;
             }
             
-            java.util.List<MerchantRecipe> recipes = villager.getRecipes();
-            java.util.List<MerchantRecipe> filteredRecipes = new java.util.ArrayList<>();
-            boolean foundMending = false;
+            // Obtenir les trades actuels dans une nouvelle liste
+            List<MerchantRecipe> recipes = new ArrayList<>(villager.getRecipes());
             
-            for (MerchantRecipe recipe : recipes) {
-                boolean hasMending = false;
-                
+            // Compteur pour debug
+            int originalSize = recipes.size();
+            plugin.getLogger().info("DEBUG: Villageois a " + originalSize + " trades au total");
+            
+            // Vérifier chaque trade pour debug
+            for (int i = 0; i < recipes.size(); i++) {
+                MerchantRecipe recipe = recipes.get(i);
+                ItemStack result = recipe.getResult();
+                plugin.getLogger().info("DEBUG: Trade " + i + " - Résultat: " + 
+                    (result != null ? result.getType() : "null") + 
+                    " - Mending détecté: " + hasMendingEnchantment(result));
+            }
+            
+            // Utiliser removeIf pour une suppression ultra-efficace (comme TradeManager)
+            recipes.removeIf(recipe -> {
                 // Vérifier le résultat du trade
                 ItemStack result = recipe.getResult();
-                if (result != null && result.getEnchantments().containsKey(Enchantment.MENDING)) {
-                    hasMending = true;
-                    foundMending = true;
+                if (hasMendingEnchantment(result)) {
+                    plugin.getLogger().info("DEBUG: Suppression d'un trade avec Mending: " + result.getType());
+                    return true; // Supprimer ce trade
                 }
                 
-                // Vérifier les ingrédients (au cas où)
-                if (!hasMending) {
-                    for (ItemStack ingredient : recipe.getIngredients()) {
-                        if (ingredient != null && ingredient.getEnchantments().containsKey(Enchantment.MENDING)) {
-                            hasMending = true;
-                            foundMending = true;
-                            break;
-                        }
+                // Vérifier tous les ingrédients
+                for (ItemStack ingredient : recipe.getIngredients()) {
+                    if (hasMendingEnchantment(ingredient)) {
+                        plugin.getLogger().info("DEBUG: Suppression d'un trade avec ingrédient Mending: " + ingredient.getType());
+                        return true; // Supprimer ce trade
                     }
                 }
                 
-                // Garder seulement les trades sans Mending
-                if (!hasMending) {
-                    filteredRecipes.add(recipe);
-                }
-            }
+                return false; // Garder ce trade
+            });
             
-            // Si on a trouvé du Mending, forcer un restock complet
-            if (foundMending) {
-                // Forcer un restock pour régénérer les trades
-                VillagerUtilities.restock(villager);
-                
-                // Optionnel : message de debug
-                if (plugin.getConfig().getBoolean("debug", false)) {
-                    plugin.getLogger().info("Restock forcé pour supprimer " + (recipes.size() - filteredRecipes.size()) + 
-                                          " trade(s) avec Mending du villageois à " + villager.getLocation());
-                }
-                
-                // Vérifier à nouveau après le restock
-                recursiveRemoveMending(villager, 0);
+            // Appliquer les changements si des trades ont été supprimés
+            if (recipes.size() != originalSize) {
+                villager.setRecipes(recipes);
+                plugin.getLogger().info("DEBUG: Supprimé " + (originalSize - recipes.size()) + 
+                                      " trade(s) avec Mending du villageois à " + villager.getLocation());
+            } else {
+                plugin.getLogger().info("DEBUG: Aucun trade avec Mending trouvé à supprimer");
             }
         } catch (Exception e) {
-            // Ignorer les erreurs silencieusement
-            if (plugin.getConfig().getBoolean("debug", false)) {
-                plugin.getLogger().warning("Erreur lors de la suppression des trades Mending: " + e.getMessage());
-            }
+            plugin.getLogger().warning("DEBUG: Erreur lors de la suppression du Mending: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-    
+
     /**
-     * Méthode récursive pour s'assurer que tous les trades Mending sont supprimés
+     * Supprime le Mending de TOUS les villageois du serveur
+     * Utilise la même approche que TradeManager pour une suppression globale
      */
-    private void recursiveRemoveMending(Villager villager, int attempts) {
-        if (attempts >= 5) return; // Éviter la récursion infinie
+    public void removeAllMendingFromServer() {
+        if (!plugin.getConfig().getBoolean("toggleableoptions.prevent-mending-trades", true)) {
+            return;
+        }
         
-        try {
-            java.util.List<MerchantRecipe> recipes = villager.getRecipes();
-            java.util.List<MerchantRecipe> filteredRecipes = new java.util.ArrayList<>();
-            boolean stillHasMending = false;
-            
-            for (MerchantRecipe recipe : recipes) {
-                boolean hasMending = false;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                int totalRemoved = 0;
+                int villagersProcessed = 0;
                 
-                // Vérifier le résultat du trade
-                ItemStack result = recipe.getResult();
-                if (result != null && result.getEnchantments().containsKey(Enchantment.MENDING)) {
-                    hasMending = true;
-                    stillHasMending = true;
-                }
-                
-                // Vérifier les ingrédients
-                if (!hasMending) {
-                    for (ItemStack ingredient : recipe.getIngredients()) {
-                        if (ingredient != null && ingredient.getEnchantments().containsKey(Enchantment.MENDING)) {
-                            hasMending = true;
-                            stillHasMending = true;
-                            break;
+                for (World world : Bukkit.getWorlds()) {
+                    // Éviter les mondes désactivés si configuré
+                    if (plugin.getConfig().getStringList("disabled-worlds").contains(world.getName())) {
+                        continue;
+                    }
+                    
+                    // Traiter tous les villageois du monde
+                    for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                        List<MerchantRecipe> recipes = new ArrayList<>(villager.getRecipes());
+                        int originalSize = recipes.size();
+                        
+                        // Suppression ultra-efficace avec removeIf (méthode TradeManager)
+                        recipes.removeIf(recipe -> {
+                            ItemStack result = recipe.getResult();
+                            if (result != null && result.getEnchantments().containsKey(Enchantment.MENDING)) {
+                                return true;
+                            }
+                            
+                            for (ItemStack ingredient : recipe.getIngredients()) {
+                                if (ingredient != null && ingredient.getEnchantments().containsKey(Enchantment.MENDING)) {
+                                    return true;
+                                }
+                            }
+                            
+                            return false;
+                        });
+                        
+                        if (recipes.size() != originalSize) {
+                            villager.setRecipes(recipes);
+                            totalRemoved += (originalSize - recipes.size());
+                        }
+                        
+                        villagersProcessed++;
+                    }
+                    
+                    // Traiter aussi les marchands ambulants
+                    for (WanderingTrader trader : world.getEntitiesByClass(WanderingTrader.class)) {
+                        List<MerchantRecipe> recipes = new ArrayList<>(trader.getRecipes());
+                        int originalSize = recipes.size();
+                        
+                        recipes.removeIf(recipe -> {
+                            ItemStack result = recipe.getResult();
+                            if (result != null && result.getEnchantments().containsKey(Enchantment.MENDING)) {
+                                return true;
+                            }
+                            
+                            for (ItemStack ingredient : recipe.getIngredients()) {
+                                if (ingredient != null && ingredient.getEnchantments().containsKey(Enchantment.MENDING)) {
+                                    return true;
+                                }
+                            }
+                            
+                            return false;
+                        });
+                        
+                        if (recipes.size() != originalSize) {
+                            trader.setRecipes(recipes);
+                            totalRemoved += (originalSize - recipes.size());
                         }
                     }
                 }
                 
-                if (!hasMending) {
-                    filteredRecipes.add(recipe);
-                }
-            }
-            
-            if (stillHasMending) {
-                // Encore du Mending trouvé, forcer un autre restock
-                VillagerUtilities.restock(villager);
-                recursiveRemoveMending(villager, attempts + 1);
-            } else {
-                // Plus de Mending, on peut s'arrêter
+                // Log final
                 if (plugin.getConfig().getBoolean("debug", false)) {
-                    plugin.getLogger().info("Tous les trades Mending supprimés après " + (attempts + 1) + " tentative(s)");
+                    plugin.getLogger().info("Nettoyage global terminé : " + totalRemoved + 
+                                          " trades avec Mending supprimés de " + villagersProcessed + " villageois");
                 }
-            }
-        } catch (Exception e) {
-            // Erreur silencieuse
-        }
+            });
+        });
     }
 
     // Optimized events with priority and fast filtering

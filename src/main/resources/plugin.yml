@@ -30,6 +30,10 @@ commands:
     description: "Shows information about the AntiVillagerLag plugin"
     usage: "/avlinfo"
     permission: avl.info
+  mending:
+    description: "Gestion des trades avec Mending"
+    usage: "/mending [clear|status|toggle]"
+    permission: antivillagerlag.mending
 
 permissions:
   avl.cooldown.bypass:
@@ -39,6 +43,9 @@ permissions:
   avl.restockcooldown.bypass:
     default: false
   avl.notify.update:
-    op: true
+    default: op
   avl.info:
     default: true
+  antivillagerlag.mending:
+    default: op
+    description: "Permission pour gérer les trades avec Mending"

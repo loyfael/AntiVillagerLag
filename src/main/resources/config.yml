@@ -7,7 +7,7 @@
 # C'est tout ! Pas plus compliqué que ça !
 
 # Option de debug
-debug: false
+debug: true
 
 # Ancien système de noms (gardé pour compatibilité)
 NamesThatDisable:
