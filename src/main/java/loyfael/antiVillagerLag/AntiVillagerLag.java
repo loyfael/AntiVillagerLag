@@ -12,7 +12,6 @@ import loyfael.antiVillagerLag.commands.UnoptimizeCommand;
 import loyfael.antiVillagerLag.commands.StatusCommand;
 import loyfael.antiVillagerLag.commands.InfoCommand;
 import loyfael.antiVillagerLag.events.EventListener;
-import loyfael.antiVillagerLag.utils.UpdateChecker;
 import loyfael.antiVillagerLag.utils.VillagerUtilities;
 import loyfael.antiVillagerLag.utils.TaskManager;
 import loyfael.antiVillagerLag.utils.VillagerCache;
@@ -59,15 +58,6 @@ public final class AntiVillagerLag extends JavaPlugin {
         // Bstats Code
         int pluginId = 15890;
         Metrics metrics = new Metrics(this, pluginId);
-
-        // Check for plugin updates
-        new UpdateChecker(this, 102949).getVersion(version -> {
-            if (this.getDescription().getVersion().equals(version)) {
-                getLogger().info("AntiVillagerLag is up to date!");
-            } else {
-                getLogger().info("There is an update for AntiVillagerLag! https://www.spigotmc.org/resources/antivillagerlag.102949/");
-            }
-        });
     }
 
     @Override

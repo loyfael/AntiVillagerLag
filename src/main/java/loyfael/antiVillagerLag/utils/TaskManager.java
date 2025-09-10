@@ -68,13 +68,6 @@ public class TaskManager {
                     long freeMemory = Runtime.getRuntime().freeMemory();
                     long usedMemory = totalMemory - freeMemory;
 
-                    plugin.getLogger().info(String.format(
-                        "AVL Memory: Used %d MB / %d MB | Cache: %d villagers",
-                        usedMemory / 1024 / 1024,
-                        totalMemory / 1024 / 1024,
-                        VillagerCache.getCacheSize()
-                    ));
-
                     // Force cleanup if use > 80%
                     if ((float) usedMemory / totalMemory > 0.8f) {
                         VillagerCache.clearCache();

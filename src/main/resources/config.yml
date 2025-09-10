@@ -6,6 +6,9 @@
 #
 # C'est tout ! Pas plus compliqué que ça !
 
+# Option de debug
+debug: false
+
 # Ancien système de noms (gardé pour compatibilité)
 NamesThatDisable:
   - Optimize
@@ -41,6 +44,9 @@ RadiusDefault: 50
 toggleableoptions:
   # Empêcher le trade avec villageois désactivés
   preventtrading: true
+
+  # Empêcher les villageois de vendre des objets avec Mending
+  prevent-mending-trades: true
 
   # Système de noms (pour compatibilité)
   usenametags: false
